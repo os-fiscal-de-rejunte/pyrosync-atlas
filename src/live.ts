@@ -1,6 +1,11 @@
 import type { RecentFeature, RecentSnapshot } from './types';
 
 export const MONITOR_INTERVAL = 5 * 60 * 1000;
+export const ALERT_DURATION = 10 * 1000;
+
+export function scheduleAlertExpiry(expire: () => void): number {
+  return window.setTimeout(expire, ALERT_DURATION);
+}
 
 export function newObservations(
   previousVersion: string | null,

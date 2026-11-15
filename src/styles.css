@@ -387,6 +387,18 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
 .monitor-help { margin: 12px 0; }
 .monitor-help summary, .explain summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: #286b4b; font-size: 12px; font-weight: 750; list-style: none; }
 .monitor-help p, .explain p { margin: 8px 0 0; color: #425d4e; font-size: 12px; line-height: 1.6; }
+.monthly-history { margin-top: 8px; background: #fff; color: #243d31; border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,.17); }
+.monthly-history > summary { list-style: none; display: flex; align-items: center; gap: 9px; padding: 10px 11px; cursor: pointer; }
+.monthly-history > summary::-webkit-details-marker { display: none; }
+.monthly-content { max-height: min(50dvh, 420px); overflow: auto; border-top: 1px solid #e5ede5; padding: 12px 14px 15px; }
+.monthly-content form { display: grid; gap: 7px; }
+.monthly-content label { color: #344f40; font-size: 12px; font-weight: 700; margin-top: 4px; }
+.monthly-content input, .monthly-content select { width: 100%; min-height: 38px; border: 1px solid #b8cabb; border-radius: 6px; background: white; color: #243d31; padding: 7px 9px; font: inherit; font-size: 12px; }
+.monthly-apply { min-height: 38px; margin-top: 6px; border: 0; border-radius: 6px; color: white; background: #266a49; font-size: 12px; font-weight: 750; }
+.monthly-apply:hover { background: #1b573a; }
+.monthly-result { margin-top: 12px; color: #425d4e; font-size: 12px; line-height: 1.5; }
+.monthly-result button { display: flex; align-items: center; gap: 4px; border: 0; padding: 7px 0 0; background: none; color: #276648; font-size: 12px; font-weight: 700; }
+.monthly-content a { color: #246747; font-size: 12px; font-weight: 700; text-underline-offset: 3px; }
 .explain { margin: -5px 0 14px; }
 .explain[open] { background: #f3f8ef; border-radius: 8px; padding: 10px 12px; margin-top: -8px; }
 .detail-panel .body-copy, .detail-panel .footnote, .detail-panel .section-title p,
@@ -405,6 +417,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px
   .map-actions { width: min(355px, calc(100% - 24px)); }
   .selected-country strong { font-size: 12px; }
   .panel-is-open .map-actions > .live-monitor { display: none; }
+  .panel-is-open .map-actions > .monthly-history { display: none; }
   .panel-monitor { display: block; margin: -8px 21px 17px; }
   .panel-monitor .live-monitor { box-shadow: none; border: 1px solid #dbe8db; }
+  .panel-monitor .monthly-history { box-shadow: none; border: 1px solid #dbe8db; }
 }

@@ -9,7 +9,7 @@ from typing import Literal
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -135,6 +135,20 @@ async def gateway(resource: str, request: Request):
         return response.json()
     except (httpx.HTTPError, ValueError):
         raise HTTPException(503, "A API de dados não respondeu. Tente novamente em instantes.") from None
+
+
+@app.get("/gateway/historico-mensal/{z}/{x}/{y}.png")
+async def monthly_tile(z: int, x: int, y: int, request: Request):
+    limit(request, "monthly-tiles", 240, 60)
+    try:
+        async with httpx.AsyncClient(timeout=90, follow_redirects=False) as client:
+            response = await client.get(f"{DATA_API}/api/historico-mensal/{z}/{x}/{y}.png",
+                                        params=list(request.query_params.multi_items()))
+        if response.status_code != 200 or not response.content.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise HTTPException(503, "Mapa histórico indisponível. Tente novamente.")
+        return Response(response.content, media_type="image/png", headers={"Cache-Control": "public, max-age=900"})
+    except httpx.HTTPError:
+        raise HTTPException(503, "Mapa histórico indisponível. Tente novamente.") from None
 
 
 @app.post("/local/analise")

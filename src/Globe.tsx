@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import {
   CallbackProperty, Cartesian2, Cartesian3, Cartographic, Color, ColorMaterialProperty, ConstantPositionProperty, ConstantProperty,
-  CustomDataSource, GeoJsonDataSource, ImageryLayer, Math as CesiumMath, PointGraphics,
+  CustomDataSource, GeoJsonDataSource, GeographicTilingScheme, ImageryLayer, Math as CesiumMath, PointGraphics,
   PolygonHierarchy, SceneMode, ScreenSpaceEventHandler, ScreenSpaceEventType, UrlTemplateImageryProvider,
   Viewer, WebMercatorTilingScheme,
 } from 'cesium';
 import { Globe2, Minus, Plus } from 'lucide-react';
 import type { CommunityReport, Country, Forecast, Points, RecentFeature } from './types';
+import type { MonthlyLayer, MonthlyStatus } from './MonthlyHistory';
 
 interface Props {
   selected: Country | null;
@@ -16,6 +17,8 @@ interface Props {
   hotspots: Points | null;
   directHotspots: Points | null;
   recentAlerts: RecentFeature[];
+  monthly: MonthlyLayer | null;
+  onMonthlyStatus: (status: MonthlyStatus) => void;
   reports: CommunityReport[];
   layers: { previsao: boolean; focos: boolean; direto: boolean; relatos: boolean };
   pickingPoint: boolean;
@@ -162,6 +165,36 @@ export default function Globe(props: Props) {
     globe.camera.flyTo({ destination: Cartesian3.fromDegrees(props.focusCell.lon, props.focusCell.lat, 220_000),
       duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1.6 });
   }, [props.focusCell]);
+
+  const monthlyCountry = props.monthly?.scope === 'country' ? props.selected?.english : undefined;
+  useEffect(() => {
+    const globe = viewer.current;
+    if (!globe || globe.isDestroyed() || !props.monthly || (props.monthly.scope === 'country' && !monthlyCountry)) return;
+    latest.current.onMonthlyStatus('loading');
+    const params = new URLSearchParams({ mes: props.monthly.month });
+    if (monthlyCountry) params.set('pais', monthlyCountry);
+    const provider = new UrlTemplateImageryProvider({
+      url: `/gateway/historico-mensal/{z}/{x}/{y}.png?${params.toString()}`,
+      tilingScheme: new GeographicTilingScheme(), tileWidth: 256, tileHeight: 256,
+      maximumLevel: 8, credit: 'NASA FIRMS · MODIS e VIIRS',
+    });
+    let failed = false;
+    const removeError = provider.errorEvent.addEventListener(() => {
+      failed = true;
+      latest.current.onMonthlyStatus('error');
+    });
+    const removeProgress = globe.scene.globe.tileLoadProgressEvent.addEventListener((remaining: number) => {
+      if (remaining === 0 && !failed) latest.current.onMonthlyStatus('ready');
+    });
+    const layer = globe.imageryLayers.addImageryProvider(provider);
+    layer.alpha = 0.82;
+    globe.scene.requestRender();
+    return () => {
+      removeError();
+      removeProgress();
+      if (!globe.isDestroyed()) { globe.imageryLayers.remove(layer, true); globe.scene.requestRender(); }
+    };
+  }, [props.monthly, monthlyCountry]);
 
   useEffect(() => {
     const globe = viewer.current;

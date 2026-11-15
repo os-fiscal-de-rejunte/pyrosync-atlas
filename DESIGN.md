@@ -75,7 +75,7 @@ Controles usam cantos discretamente arredondados; painéis usam raios um pouco m
 
 Busca geográfica, seletor de camadas, listas por célula, avisos científicos e botões de ação usam contraste e estados de foco visíveis.
 
-O território selecionado recebe preenchimento suave, contorno e identificação textual. O monitoramento é um painel recolhível; novas observações usam ponto vermelho com pulsação lenta e texto acessível. A preferência por movimento reduzido mantém os pontos estáticos. Explicações contextuais usam controles expansíveis acessíveis por teclado.
+O território selecionado recebe preenchimento suave, contorno e identificação textual. O monitoramento mundial é um painel recolhível; novas observações usam ponto vermelho com pulsação lenta durante dez segundos e texto acessível. A preferência por movimento reduzido mantém os pontos estáticos. O histórico mensal do mundo ou do país permanece no mapa até ser removido. Explicações contextuais usam controles expansíveis acessíveis por teclado.
 
 ## Do's and Don'ts
 

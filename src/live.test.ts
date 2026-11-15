@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { MONITOR_INTERVAL, newObservations } from './live';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ALERT_DURATION, MONITOR_INTERVAL, newObservations, scheduleAlertExpiry } from './live';
 import type { RecentFeature, RecentSnapshot } from './types';
 
 function point(id: string): RecentFeature {
@@ -20,10 +20,23 @@ function snapshot(features: RecentFeature[], reset = false): RecentSnapshot {
 }
 
 describe('monitoramento de observações', () => {
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+  it('remove o destaque exatamente após dez segundos', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('window', { setTimeout });
+    const expire = vi.fn();
+    scheduleAlertExpiry(expire);
+    vi.advanceTimersByTime(9_999);
+    expect(expire).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(expire).toHaveBeenCalledOnce();
+  });
   it('estabelece uma referência sem anunciar dados anteriores', () => {
     const seen = new Map<string, string>();
     expect(newObservations(null, snapshot([point('antigo')]), seen)).toEqual([]);
     expect(MONITOR_INTERVAL).toBe(300_000);
+    expect(ALERT_DURATION).toBe(10_000);
   });
 
   it('marca apenas registros informados como novos e evita repetir o mesmo ponto', () => {

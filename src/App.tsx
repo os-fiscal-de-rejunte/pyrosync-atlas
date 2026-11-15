@@ -3,6 +3,8 @@ import { ArrowDownRight, ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronD
 import type { FeatureCollection } from 'geojson';
 import Globe from './Globe';
 import LiveMonitor from './LiveMonitor';
+import MonthlyHistory from './MonthlyHistory';
+import type { MonthlyLayer, MonthlyStatus } from './MonthlyHistory';
 import { dateLabel, dateUtc, getData, numberLabel, percentLabel, postData } from './api';
 import type { Analysis, Calendar, CommunityReport, Country, CountryProperties, Forecast, ForecastProperties, HistoryComparison, Points } from './types';
 import { useLiveMonitor } from './useLiveMonitor';
@@ -101,6 +103,8 @@ function App() {
   const [menu, setMenu] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [layers, setLayers] = useState<Layers>({ previsao: true, focos: true, direto: false, relatos: true });
+  const [monthly, setMonthly] = useState<MonthlyLayer | null>(null);
+  const [monthlyStatus, setMonthlyStatus] = useState<MonthlyStatus>('loading');
   const [regionInput, setRegionInput] = useState('');
   const [region, setRegion] = useState('');
   const [draftStart, setDraftStart] = useState(dateUtc(5));
@@ -133,7 +137,7 @@ function App() {
   const [scenario, setScenario] = useState<{ baseline: number; scenario: number; aviso: string } | null>(null);
   const [scenarioBusy, setScenarioBusy] = useState(false);
   const [scenarioError, setScenarioError] = useState('');
-  const { monitor, clearAlerts } = useLiveMonitor(country?.english ?? null, region, !intro);
+  const { monitor, clearAlerts } = useLiveMonitor(true);
   const selectionRef = useRef({ country, region, filters });
   selectionRef.current = { country, region, filters };
 
@@ -300,7 +304,7 @@ function App() {
 
     <main className="workspace">
       <section className="map-shell" aria-label="Mapa e camadas">
-        <Globe selected={country} focusCell={focusCell} countries={countries} forecast={forecast} hotspots={hotspots} directHotspots={directHotspots} recentAlerts={monitor.alerts} reports={reports} layers={layers} pickingPoint={picking}
+        <Globe selected={country} focusCell={focusCell} countries={countries} forecast={forecast} hotspots={hotspots} directHotspots={directHotspots} recentAlerts={monitor.alerts} monthly={monthly} onMonthlyStatus={setMonthlyStatus} reports={reports} layers={layers} pickingPoint={picking}
           onCountry={chooseCountry} onPoint={(lat, lon) => { setReportLat(lat.toFixed(5)); setReportLon(lon.toFixed(5)); setPicking(false); }} />
         <div className="map-top">
           <div className="search-wrap"><div className="search-field"><Search size={18} /><input value={search} onFocus={() => setShowSearch(true)} onChange={(event) => { setSearch(event.target.value); setShowSearch(true); }} placeholder="Buscar um país ou território" aria-label="Buscar país ou território" />{search && <button onClick={() => setSearch('')} aria-label="Limpar busca"><X size={16} /></button>}<span className="search-shortcut">⌕</span></div>
@@ -311,18 +315,19 @@ function App() {
         <div className="map-actions"><div className="map-action-row"><button className={`map-action ${layersOpen ? 'active' : ''}`} onClick={() => setLayersOpen(!layersOpen)} aria-expanded={layersOpen}><Layers3 size={17} /> Camadas <ChevronDown size={14} /></button>
           {country && <button className="selected-country" onClick={() => openPanel('panorama')} aria-label={`Em análise: ${region ? `${region}, ` : ''}${country.name}. Ver panorama`}><MapPin size={16} /><span><small>EM ANÁLISE</small><strong>{region ? `${region}, ${country.name}` : country.name}</strong></span><ArrowUpRight size={15} /></button>}</div>
           {layersOpen && <div className="layer-menu"><strong>O que aparece no mapa</strong><label><input type="checkbox" checked={layers.previsao} onChange={(event) => setLayers({ ...layers, previsao: event.target.checked })} /><span>Células previstas<small>Modelo experimental</small></span></label><label><input type="checkbox" checked={layers.focos} onChange={(event) => setLayers({ ...layers, focos: event.target.checked })} /><span>Focos harmonizados<small>Cobertura limitada do banco</small></span></label><label><input type="checkbox" checked={layers.direto} onChange={(event) => setLayers({ ...layers, direto: event.target.checked })} /><span>FIRMS direto<small>{busy.direct ? 'Consultando...' : directHotspots ? `${directHotspots.features.length} pontos · amostra não harmonizada` : 'Amostra de até 350 pontos'}</small></span></label>{errors.direct && <p className="layer-error">{errors.direct}</p>}<label><input type="checkbox" checked={layers.relatos} onChange={(event) => setLayers({ ...layers, relatos: event.target.checked })} /><span>Relatos aprovados<small>Observações humanas</small></span></label></div>}
-          {country && <LiveMonitor country={country.name} region={region} monitor={monitor} onClear={clearAlerts} onFocus={(lat, lon) => setFocusCell({ lat, lon, request: Date.now() })} />}
+          <MonthlyHistory country={country?.name ?? null} active={monthly} status={monthlyStatus} onApply={(layer) => { setMonthlyStatus('loading'); setMonthly(layer); setLayers((old) => ({ ...old, previsao: false, focos: false, direto: false })); }} onRemove={() => setMonthly(null)} />
+          <LiveMonitor monitor={monitor} onClear={clearAlerts} onFocus={(lat, lon) => setFocusCell({ lat, lon, request: Date.now() })} />
         </div>
         <span className="visually-hidden" role="status" aria-live="polite">{monitor.newCount > 0 ? `${numberLabel(monitor.newCount)} novos registros térmicos em destaque.` : monitor.status === 'error' ? 'Monitoramento temporariamente indisponível.' : monitor.referenceReset ? 'Referência do monitoramento reiniciada.' : ''}</span>
         {picking && <div className="map-pick"><Crosshair size={16} /> Clique no mapa para marcar o local do relato <button onClick={() => setPicking(false)}>Cancelar</button></div>}
-        <div className="map-bottom"><div className="map-caption"><Navigation size={15} /><span>Arraste para girar <i /> Clique em um país <i /> Imagem base NASA Blue Marble (2004)</span></div><div className="map-legend"><span>Células experimentais</span><div className="legend-ramp" /><span>menor</span><span>maior</span>{monitor.alerts.length > 0 && <span className="new-legend"><i /> Novo registro térmico</span>}</div></div>
+        <div className="map-bottom"><div className="map-caption"><Navigation size={15} /><span>Arraste para girar <i /> Clique em um país <i /> Imagem base NASA Blue Marble (2004)</span></div><div className="map-legend">{layers.previsao && <><span>Células experimentais</span><div className="legend-ramp" /><span>menor</span><span>maior</span></>}{monthly && <span className="new-legend"><i /> Registros do mês · {monthly.scope === 'world' ? 'mundo' : country?.name}</span>}{monitor.alerts.length > 0 && <span className="new-legend"><i /> Novo registro · 10 segundos</span>}</div></div>
       </section>
 
       {panelOpen && <aside className="detail-panel" aria-label={`Informações de ${selectedName}`}>
         <div className="panel-scroll">
           <div className="panel-heading"><div><div className="location-line"><MapPin size={14} /> TERRITÓRIO SELECIONADO</div><h2>{selectedName}</h2><p>{region || 'Visão do país'} <span>·</span> Limites aproximados do Natural Earth</p></div><button className="close-panel" onClick={() => setPanelOpen(false)} aria-label="Fechar painel"><X size={18} /></button></div>
           <form className="region-select" onSubmit={(event) => { event.preventDefault(); setRegion(regionInput.trim()); setAnalysis(null); }}><MapPin size={15} /><input value={regionInput} onChange={(event) => setRegionInput(event.target.value)} placeholder="Filtrar estado ou província" aria-label="Filtrar estado ou província" /><button type="submit">Aplicar</button></form>
-          {country && <div className="panel-monitor"><LiveMonitor country={country.name} region={region} monitor={monitor} onClear={clearAlerts} onFocus={(lat, lon) => { setPanelOpen(false); setFocusCell({ lat, lon, request: Date.now() }); }} /></div>}
+          <div className="panel-monitor"><MonthlyHistory country={country?.name ?? null} active={monthly} status={monthlyStatus} onApply={(layer) => { setMonthlyStatus('loading'); setMonthly(layer); setLayers((old) => ({ ...old, previsao: false, focos: false, direto: false })); setPanelOpen(false); }} onRemove={() => setMonthly(null)} /><LiveMonitor monitor={monitor} onClear={clearAlerts} onFocus={(lat, lon) => { setPanelOpen(false); setFocusCell({ lat, lon, request: Date.now() }); }} /></div>
           <nav className="panel-tabs" aria-label="Informações do território"><button aria-pressed={tab === 'panorama'} onClick={() => setTab('panorama')}>Panorama</button><button aria-pressed={tab === 'calendario'} onClick={() => setTab('calendario')}>Calendário</button><button aria-pressed={tab === 'analise'} onClick={() => setTab('analise')}>Análise</button><button aria-pressed={tab === 'relatos'} onClick={() => setTab('relatos')}>Relatos</button></nav>
 
           {tab === 'panorama' && <div className="panel-content"><div className="section-title"><div><h3>Atividade observada</h3><p>Registros de satélite no período consultado</p></div><button className="round-link" onClick={() => setTab('calendario')} aria-label="Abrir calendário"><ArrowUpRight size={18} /></button></div><Explain subject="atividade observada">Os satélites identificam pontos mais quentes que o entorno. MODIS e VIIRS têm resoluções diferentes; um registro térmico não é necessariamente um incêndio distinto.</Explain>
