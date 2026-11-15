@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import {
-  Cartesian2, Cartesian3, Cartographic, Color, ColorMaterialProperty, ConstantPositionProperty, ConstantProperty,
+  CallbackProperty, Cartesian2, Cartesian3, Cartographic, Color, ColorMaterialProperty, ConstantPositionProperty, ConstantProperty,
   CustomDataSource, GeoJsonDataSource, ImageryLayer, Math as CesiumMath, PointGraphics,
-  SceneMode, ScreenSpaceEventHandler, ScreenSpaceEventType, UrlTemplateImageryProvider,
+  PolygonHierarchy, SceneMode, ScreenSpaceEventHandler, ScreenSpaceEventType, UrlTemplateImageryProvider,
   Viewer, WebMercatorTilingScheme,
 } from 'cesium';
 import { Globe2, Minus, Plus } from 'lucide-react';
-import type { CommunityReport, Country, Forecast, Points } from './types';
+import type { CommunityReport, Country, Forecast, Points, RecentFeature } from './types';
 
 interface Props {
   selected: Country | null;
@@ -15,6 +15,7 @@ interface Props {
   forecast: Forecast | null;
   hotspots: Points | null;
   directHotspots: Points | null;
+  recentAlerts: RecentFeature[];
   reports: CommunityReport[];
   layers: { previsao: boolean; focos: boolean; direto: boolean; relatos: boolean };
   pickingPoint: boolean;
@@ -44,6 +45,8 @@ export default function Globe(props: Props) {
   const forecastLayer = useRef<GeoJsonDataSource | null>(null);
   const hotspotLayer = useRef<GeoJsonDataSource | null>(null);
   const directLayer = useRef<GeoJsonDataSource | null>(null);
+  const countryOutline = useRef<CustomDataSource | null>(null);
+  const recentLayer = useRef<CustomDataSource | null>(null);
   const reportLayer = useRef<CustomDataSource | null>(null);
   const latest = useRef(props);
   const initialSelection = useRef(true);
@@ -81,8 +84,14 @@ export default function Globe(props: Props) {
     globe.scene.screenSpaceCameraController.enableLook = true;
     globe.camera.setView({ destination: cameraHome() });
     const reports = new CustomDataSource('observacoes-humanas');
+    const outline = new CustomDataSource('pais-selecionado');
+    const recent = new CustomDataSource('novas-observacoes');
     reportLayer.current = reports;
+    countryOutline.current = outline;
+    recentLayer.current = recent;
     void globe.dataSources.add(reports);
+    void globe.dataSources.add(outline);
+    void globe.dataSources.add(recent);
 
     void GeoJsonDataSource.load('/countries.geojson', {
       clampToGround: true, fill: Color.fromCssColorString('#bcead3').withAlpha(0.01),
@@ -91,7 +100,7 @@ export default function Globe(props: Props) {
       if (disposed || globe.isDestroyed()) return;
       countryLayer.current = layer;
       await globe.dataSources.add(layer);
-      highlightCountry(globe, layer, latest.current.selected?.code ?? null);
+      highlightCountry(globe, layer, outline, latest.current.selected?.code ?? null);
       globe.scene.requestRender();
     }).catch(() => {
       if (!disposed) setError('Não foi possível carregar os limites dos países. A busca continua disponível.');
@@ -125,13 +134,18 @@ export default function Globe(props: Props) {
       hotspotLayer.current = null;
       directLayer.current = null;
       reportLayer.current = null;
+      countryOutline.current = null;
+      recentLayer.current = null;
     };
   }, []);
 
   useEffect(() => {
     const globe = viewer.current;
-    if (!globe || !props.selected || globe.isDestroyed()) return;
-    if (countryLayer.current) highlightCountry(globe, countryLayer.current, props.selected.code);
+    if (!globe || globe.isDestroyed()) return;
+    if (countryLayer.current && countryOutline.current) {
+      highlightCountry(globe, countryLayer.current, countryOutline.current, props.selected?.code ?? null);
+    }
+    if (!props.selected) return;
     if (initialSelection.current) {
       initialSelection.current = false;
     } else {
@@ -238,6 +252,41 @@ export default function Globe(props: Props) {
     globe.scene.requestRender();
   }, [props.reports, props.layers.relatos]);
 
+  useEffect(() => {
+    const globe = viewer.current;
+    const layer = recentLayer.current;
+    if (!globe || !layer || globe.isDestroyed()) return;
+    layer.entities.removeAll();
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const pulse = () => (1 + Math.sin(performance.now() * Math.PI / 1800)) / 2;
+    const red = Color.fromCssColorString('#ed302e');
+    const size = new CallbackProperty(() => motion.matches ? 11 : 9 + 5 * pulse(), false);
+    const color = new CallbackProperty(() => red.withAlpha(motion.matches ? 1 : 0.42 + 0.58 * pulse()), false);
+    props.recentAlerts.forEach((feature) => {
+      const [lon, lat] = feature.geometry.coordinates;
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+      layer.entities.add({
+        position: Cartesian3.fromDegrees(lon, lat, 1500),
+        point: { pixelSize: size, color,
+          outlineColor: Color.WHITE, outlineWidth: 2 },
+      });
+    });
+    let timer: number | undefined;
+    const syncMotion = () => {
+      if (timer !== undefined) window.clearInterval(timer);
+      timer = !motion.matches && props.recentAlerts.length ? window.setInterval(() => {
+        if (!globe.isDestroyed()) globe.scene.requestRender();
+      }, 250) : undefined;
+      if (!globe.isDestroyed()) globe.scene.requestRender();
+    };
+    motion.addEventListener('change', syncMotion);
+    syncMotion();
+    return () => {
+      motion.removeEventListener('change', syncMotion);
+      if (timer !== undefined) window.clearInterval(timer);
+    };
+  }, [props.recentAlerts]);
+
   const zoom = (direction: 'in' | 'out') => {
     const globe = viewer.current;
     if (!globe || globe.isDestroyed()) return;
@@ -249,11 +298,27 @@ export default function Globe(props: Props) {
   const reset = () => {
     const globe = viewer.current;
     if (!globe || globe.isDestroyed()) return;
-    globe.camera.flyTo({ destination: cameraHome(), duration: 1.2 });
+    globe.camera.flyTo({ destination: cameraHome(), duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1.2 });
+  };
+
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const globe = viewer.current;
+    if (!globe || globe.isDestroyed()) return;
+    const step = CesiumMath.toRadians(5);
+    if (event.key === 'ArrowLeft') globe.camera.rotateLeft(step);
+    else if (event.key === 'ArrowRight') globe.camera.rotateRight(step);
+    else if (event.key === 'ArrowUp') globe.camera.rotateUp(step);
+    else if (event.key === 'ArrowDown') globe.camera.rotateDown(step);
+    else if (event.key === '+' || event.key === '=') zoom('in');
+    else if (event.key === '-') zoom('out');
+    else if (event.key === 'Home') reset();
+    else return;
+    event.preventDefault();
+    globe.scene.requestRender();
   };
 
   return <>
-    <div className="globe" ref={element} role="application" aria-label="Globo tridimensional interativo. Arraste para girar, use a roda para aproximar e clique em um país." />
+    <div className="globe" ref={element} role="region" tabIndex={0} onKeyDown={handleKey} aria-label="Globo 3D. Use as setas para girar, mais e menos para zoom. Selecione um país pelo mapa ou pela busca." />
     <div className="globe-controls" aria-label="Controles do globo">
       <button title="Aproximar" aria-label="Aproximar globo" onClick={() => zoom('in')}><Plus size={18} /></button>
       <button title="Afastar" aria-label="Afastar globo" onClick={() => zoom('out')}><Minus size={18} /></button>
@@ -263,13 +328,29 @@ export default function Globe(props: Props) {
   </>;
 }
 
-function highlightCountry(globe: Viewer, layer: GeoJsonDataSource, code: string | null) {
+function highlightCountry(globe: Viewer, layer: GeoJsonDataSource, outline: CustomDataSource, code: string | null) {
+  outline.entities.removeAll();
+  const addOutline = (hierarchy: PolygonHierarchy) => {
+    const positions = hierarchy.positions;
+    if (positions.length > 2) {
+      const closed = [...positions, positions[0]];
+      outline.entities.add({ polyline: { positions: closed, clampToGround: true, width: 5,
+        material: Color.fromCssColorString('#173f32').withAlpha(0.95) } });
+      outline.entities.add({ polyline: { positions: closed, clampToGround: true, width: 2.5,
+        material: Color.fromCssColorString('#dfff9b') } });
+    }
+    hierarchy.holes?.forEach(addOutline);
+  };
   layer.entities.values.forEach((entity) => {
     if (!entity.polygon) return;
     const isSelected = code && entity.properties?.ADM0_A3?.getValue(globe.clock.currentTime) === code;
     entity.polygon.material = new ColorMaterialProperty(
-      Color.fromCssColorString(isSelected ? '#d9f4b8' : '#bcead3').withAlpha(isSelected ? 0.13 : 0.01),
+      Color.fromCssColorString(isSelected ? '#d9f4b8' : '#bcead3').withAlpha(isSelected ? 0.25 : 0.01),
     );
     entity.polygon.outlineColor = new ConstantProperty(Color.fromCssColorString(isSelected ? '#e2fa9e' : '#d8ebe0').withAlpha(isSelected ? 0.95 : 0.48));
+    if (isSelected) {
+      const hierarchy = entity.polygon.hierarchy?.getValue(globe.clock.currentTime) as PolygonHierarchy | undefined;
+      if (hierarchy) addOutline(hierarchy);
+    }
   });
 }

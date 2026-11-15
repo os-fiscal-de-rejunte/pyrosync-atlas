@@ -1,4 +1,4 @@
-import type { FeatureCollection, Geometry } from 'geojson';
+import type { Feature, FeatureCollection, Geometry, Point } from 'geojson';
 
 export interface CountryProperties {
   NAME_EN: string;
@@ -55,6 +55,31 @@ export interface Calendar {
 
 export type Points = FeatureCollection<Geometry, Record<string, unknown>> & {
   metadata?: { quantidade: number; proximo_deslocamento?: number | null; truncado?: boolean; aviso: string };
+};
+
+export interface RecentProperties {
+  id: string;
+  observado_em_utc: string;
+  sensor_family: 'MODIS' | 'VIIRS';
+  produto: string;
+  satelite: string;
+  confianca: string | null;
+}
+
+export type RecentFeature = Feature<Point, RecentProperties>;
+
+export type RecentSnapshot = FeatureCollection<Point, RecentProperties> & {
+  metadata: {
+    consultado_em_utc: string;
+    inicio_janela_utc: string;
+    total_disponibilizado: number;
+    limite: number;
+    fontes: string[];
+    versao: string;
+    referencia_reiniciada: boolean;
+    total_novos: number;
+    novos_truncados: boolean;
+  };
 };
 
 export interface Analysis {

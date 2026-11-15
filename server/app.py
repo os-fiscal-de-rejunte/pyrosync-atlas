@@ -29,7 +29,7 @@ app.add_middleware(
 
 LIMITS = defaultdict(deque)
 GLOBAL_AI = deque()
-GATEWAY = {"paises", "regioes", "focos", "focos-firms", "celulas", "calendario", "previsao"}
+GATEWAY = {"paises", "regioes", "focos", "focos-firms", "focos-recentes", "celulas", "calendario", "previsao"}
 
 
 def limit(request: Request, namespace: str, maximum: int, seconds: int):

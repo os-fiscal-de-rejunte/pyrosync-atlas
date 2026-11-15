@@ -8,6 +8,9 @@ colors:
   surface: "#ffffff"
   mint: "#d2ecb7"
   fire: "#eb875a"
+  selection: "#e7f6d6"
+  selection-boundary: "#dfff9b"
+  new-observation: "#ed302e"
 typography:
   display:
     fontFamily: "Manrope Variable, sans-serif"
@@ -71,6 +74,8 @@ Controles usam cantos discretamente arredondados; painéis usam raios um pouco m
 ## Components
 
 Busca geográfica, seletor de camadas, listas por célula, avisos científicos e botões de ação usam contraste e estados de foco visíveis.
+
+O território selecionado recebe preenchimento suave, contorno e identificação textual. O monitoramento é um painel recolhível; novas observações usam ponto vermelho com pulsação lenta e texto acessível. A preferência por movimento reduzido mantém os pontos estáticos. Explicações contextuais usam controles expansíveis acessíveis por teclado.
 
 ## Do's and Don'ts
 
