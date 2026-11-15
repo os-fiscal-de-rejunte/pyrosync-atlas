@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-15T15:17:21Z",
+  "title": "Design System: PyroSync Atlas",
+  "extensions": {
+    "breakpoints": [
+      {
+        "name": "compact",
+        "value": "850px"
+      }
+    ],
+    "shadows": [
+      {
+        "name": "floating-panel",
+        "value": "0 12px 40px rgba(0,0,0,.25)",
+        "purpose": "Separar o painel do globo."
+      }
+    ],
+    "motion": [
+      {
+        "name": "camera",
+        "value": "1.6s",
+        "purpose": "Aproximar o território selecionado; respeitar movimento reduzido."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Ação principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Executa a ação principal de um painel.",
+      "html": "<button class=\"ds-primary\">Consultar período</button>",
+      "css": ".ds-primary{background:#285f47;color:#fff;border:0;border-radius:8px;padding:12px 14px;font-weight:750}.ds-primary:hover{background:#194c37}.ds-primary:focus-visible{outline:3px solid #a4d67f;outline-offset:3px}"
+    },
+    {
+      "name": "Busca",
+      "kind": "input",
+      "description": "Pesquisa um país ou território.",
+      "html": "<input class=\"ds-search\" placeholder=\"Buscar um país ou território\">",
+      "css": ".ds-search{border:1px solid #e1eae1;background:#fbfcfa;color:#365247;border-radius:8px;padding:10px 11px}.ds-search:focus-visible{outline:3px solid #a4d67f;outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Observatório orbital",
+    "overview": "O globo é a superfície principal. Barras compactas e painéis removíveis deixam o território visível e mantêm as tarefas científicas acessíveis em linguagem simples.",
+    "keyCharacteristics": [
+      "Globo tridimensional",
+      "Painéis fecháveis",
+      "Fontes e limites junto aos dados"
+    ],
+    "rules": [],
+    "dos": [
+      "Do preservar legenda, fonte e condição junto aos valores.",
+      "Do manter o globo navegável e os painéis fecháveis."
+    ],
+    "donts": [
+      "Don't apresentar uma imagem base estática como observação ao vivo.",
+      "Don't apresentar estimativas experimentais como alertas operacionais."
+    ]
+  }
+}

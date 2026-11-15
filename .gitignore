@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.env
+.env.*
+!.env.example
+*.pyc
+*.log
+*.tsbuildinfo
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/questions/
