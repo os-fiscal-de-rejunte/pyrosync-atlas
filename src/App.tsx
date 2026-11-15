@@ -101,6 +101,7 @@ function App() {
   const [draftEnd, setDraftEnd] = useState(dateUtc(1));
   const [draftSensor, setDraftSensor] = useState<Sensor>('');
   const [filters, setFilters] = useState<{ inicio: string; fim: string; sensor: Sensor }>({ inicio: dateUtc(5), fim: dateUtc(1), sensor: '' });
+  const [retry, setRetry] = useState(0);
   const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [hotspots, setHotspots] = useState<Points | null>(null);
@@ -165,7 +166,7 @@ function App() {
       .catch((error: unknown) => { if (!controller.signal.aborted) setError('forecast', errorMessage(error)); })
       .finally(() => { if (!controller.signal.aborted) setWorking('forecast', false); });
     return () => controller.abort();
-  }, [country, region]);
+  }, [country, region, retry]);
 
   useEffect(() => {
     if (!country) return;
@@ -175,7 +176,7 @@ function App() {
       .then(setCalendar).catch((error: unknown) => { if (!controller.signal.aborted) setError('calendar', errorMessage(error)); })
       .finally(() => { if (!controller.signal.aborted) setWorking('calendar', false); });
     return () => controller.abort();
-  }, [country, region, filters]);
+  }, [country, region, filters, retry]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -314,9 +315,9 @@ function App() {
           <div className="panel-tabs" role="tablist" aria-label="Informações do território"><button role="tab" aria-selected={tab === 'panorama'} onClick={() => setTab('panorama')}>Panorama</button><button role="tab" aria-selected={tab === 'calendario'} onClick={() => setTab('calendario')}>Calendário</button><button role="tab" aria-selected={tab === 'analise'} onClick={() => setTab('analise')}>Análise</button><button role="tab" aria-selected={tab === 'relatos'} onClick={() => setTab('relatos')}>Relatos</button></div>
 
           {tab === 'panorama' && <div className="panel-content"><div className="section-title"><div><h3>Atividade observada</h3><p>Registros de satélite no período consultado</p></div><button className="round-link" onClick={() => setTab('calendario')} aria-label="Abrir calendário"><ArrowUpRight size={18} /></button></div>
-            {busy.calendar ? <Spinner text="Consultando NASA FIRMS" /> : errors.calendar ? <Notice error>{errors.calendar}</Notice> : calendar ? <><div className="metric-row"><div className="metric"><span className="sensor-dot viirs" /> VIIRS<strong>{viirs == null ? '—' : numberLabel(viirs)}</strong><small>registros retornados</small></div><div className="metric"><span className="sensor-dot modis" /> MODIS<strong>{modis == null ? '—' : numberLabel(modis)}</strong><small>registros retornados</small></div></div><CalendarBars calendar={calendar} /><div className="chart-footer"><span><i className="sensor-dot viirs" /> VIIRS</span><span><i className="sensor-dot modis" /> MODIS</span><span>{dateLabel(calendar.inicio)} — {dateLabel(calendar.fim_consultado)}</span></div><p className="footnote">Consulta direta ao FIRMS, sem harmonização. Sensores têm sensibilidades diferentes; não some os registros como incêndios.</p></> : <Notice>Selecione um território para consultar o histórico.</Notice>}
+            {busy.calendar ? <Spinner text="Consultando NASA FIRMS" /> : errors.calendar ? <><Notice error>{errors.calendar}</Notice><button className="inline-action" onClick={() => setRetry((value) => value + 1)}>Tentar novamente <ArrowRight size={15} /></button></> : calendar ? <><div className="metric-row"><div className="metric"><span className="sensor-dot viirs" /> VIIRS<strong>{viirs == null ? '—' : numberLabel(viirs)}</strong><small>registros retornados</small></div><div className="metric"><span className="sensor-dot modis" /> MODIS<strong>{modis == null ? '—' : numberLabel(modis)}</strong><small>registros retornados</small></div></div><CalendarBars calendar={calendar} /><div className="chart-footer"><span><i className="sensor-dot viirs" /> VIIRS</span><span><i className="sensor-dot modis" /> MODIS</span><span>{dateLabel(calendar.inicio)} — {dateLabel(calendar.fim_consultado)}</span></div><p className="footnote">Consulta direta ao FIRMS, sem harmonização. Sensores têm sensibilidades diferentes; não some os registros como incêndios.</p></> : <Notice>Selecione um território para consultar o histórico.</Notice>}
             <div className="section-divider" /><div className="section-title"><div><h3>Próximo dia</h3><p>Saída do modelo por célula</p></div><span className="status-pill"><span /> EXPERIMENTAL</span></div>
-            {busy.forecast ? <Spinner text="Calculando células e clima" /> : errors.forecast ? <Notice error>{errors.forecast}</Notice> : forecast ? <><p className="period-line"><CalendarDays size={15} /> {dateLabel(forecast.inicio_previsto_utc)} UTC <span>·</span> grade de 0,25°</p><CellList forecast={forecast} selectedCell={selectedCell?.celula_id ?? null} onSelect={(cell) => { setSelectedCell(cell); setScenario(null); setFocusCell({ lat: cell.latitude, lon: cell.longitude, request: Date.now() }); }} onNext={nextForecast} /><Notice>Os valores são condicionais, não calibrados globalmente e não representam o risco do país. Não use para alertas.</Notice><button className="inline-action" onClick={() => setTab('cenario')}>Explorar um cenário <ArrowRight size={15} /></button></> : <Notice>Selecione um território para consultar a previsão.</Notice>}
+            {busy.forecast ? <Spinner text="Calculando células e clima" /> : errors.forecast ? <><Notice error>{errors.forecast}</Notice><button className="inline-action" onClick={() => setRetry((value) => value + 1)}>Tentar novamente <ArrowRight size={15} /></button></> : forecast ? <><p className="period-line"><CalendarDays size={15} /> {dateLabel(forecast.inicio_previsto_utc)} UTC <span>·</span> grade de 0,25°</p><CellList forecast={forecast} selectedCell={selectedCell?.celula_id ?? null} onSelect={(cell) => { setSelectedCell(cell); setScenario(null); setFocusCell({ lat: cell.latitude, lon: cell.longitude, request: Date.now() }); }} onNext={nextForecast} /><Notice>Os valores são condicionais, não calibrados globalmente e não representam o risco do país. Não use para alertas.</Notice><button className="inline-action" onClick={() => setTab('cenario')}>Explorar um cenário <ArrowRight size={15} /></button></> : <Notice>Selecione um território para consultar a previsão.</Notice>}
             <div className="section-divider" /><div className="section-title"><div><h3>Focos harmonizados</h3><p>Registros presentes no banco da equipe</p></div><Database size={18} className="muted-icon" /></div>{busy.hotspots ? <Spinner /> : errors.hotspots ? <Notice error>{errors.hotspots}</Notice> : <p className="body-copy">{hotspots?.features.length ? `${numberLabel(hotspots.features.length)} registros nesta página.` : 'Nenhum registro retornado para a seleção.'} A cobertura do banco é limitada às áreas e datas carregadas.</p>}
           </div>}
 

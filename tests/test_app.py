@@ -64,4 +64,3 @@ def test_report_is_stored_with_pending_response(monkeypatch):
     response = client.post('/local/relatos', json=valid_report())
     assert response.status_code == 201
     assert response.json()['status'] == 'pendente'
-
