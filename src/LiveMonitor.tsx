@@ -35,7 +35,7 @@ export default function LiveMonitor({ country, region, monitor, onClear, onFocus
           monitor.total !== null ? <p role="status">{numberLabel(monitor.total)} registros retornados para ontem e hoje, em UTC. A primeira consulta cria a referência.</p> : null}
       {monitor.newCount > 0 && <>
         <div className="monitor-new-title"><strong>Novos registros</strong><button type="button" onClick={onClear}><X size={14} /> Limpar destaques</button></div>
-        <ul className="monitor-list">{monitor.alerts.slice(0, 3).map((point) => {
+        <ul className="monitor-list">{monitor.alerts.map((point) => {
           const [lon, lat] = point.geometry.coordinates;
           return <li key={point.properties.id}><button type="button" onClick={() => onFocus(lat, lon)}><MapPin size={14} /><span>{point.properties.sensor_family} · {timeUtc(point.properties.observado_em_utc)}<small>{lat.toFixed(3)}°, {lon.toFixed(3)}°</small></span></button></li>;
         })}</ul>
