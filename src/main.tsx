@@ -1,8 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
-import '@fontsource-variable/manrope';
-import '@fontsource-variable/dm-sans';
 import './styles.css';
 import App from './App';
 
