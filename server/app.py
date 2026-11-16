@@ -40,7 +40,7 @@ def limit(request: Request, namespace: str, maximum: int, seconds: int):
     while bucket and bucket[0] < now - seconds:
         bucket.popleft()
     if len(bucket) >= maximum:
-        raise HTTPException(429, "Muitas solicitações. Aguarde um pouco e tente novamente.")
+        raise HTTPException(429, "Too many requests. Wait a moment and try again.")
     bucket.append(now)
     if len(LIMITS) > 5000:
         for old_key in list(LIMITS):
@@ -53,7 +53,7 @@ def limit_global_ai():
     while GLOBAL_AI and GLOBAL_AI[0] < now - 3600:
         GLOBAL_AI.popleft()
     if len(GLOBAL_AI) >= 40:
-        raise HTTPException(429, "Limite temporário das análises alcançado. Tente novamente mais tarde.")
+        raise HTTPException(429, "Temporary analysis limit reached. Try again later.")
     GLOBAL_AI.append(now)
 
 
@@ -66,12 +66,12 @@ class AreaQuery(BaseModel):
     @model_validator(mode="after")
     def validate_dates(self):
         if self.fim < self.inicio or (self.fim - self.inicio).days > 366 or self.fim > datetime.now(UTC).date():
-            raise ValueError("Informe datas válidas, sem datas futuras, com intervalo de até 367 dias.")
+            raise ValueError("Give valid dates, none in the future, spanning at most 367 days.")
         return self
 
 
 class AnalysisQuery(AreaQuery):
-    pergunta: str = Field(default="O que podemos concluir sobre a região?", min_length=3, max_length=500)
+    pergunta: str = Field(default="What can we conclude about the region?", min_length=3, max_length=500)
 
 
 class ComparisonQuery(AreaQuery):
@@ -101,14 +101,14 @@ class Report(BaseModel):
     @classmethod
     def strip_text(cls, value):
         if not value.strip():
-            raise ValueError("Campo obrigatório.")
+            raise ValueError("Required field.")
         return value.strip()
 
     @field_validator("observed_at")
     @classmethod
     def valid_observation_time(cls, value):
         if value.tzinfo is None or value > datetime.now(UTC):
-            raise ValueError("Informe data e hora passadas, com fuso horário.")
+            raise ValueError("Give a past date and time, with a time zone.")
         return value
 
 
@@ -121,20 +121,20 @@ async def status():
 @app.get("/gateway/{resource}")
 async def gateway(resource: str, request: Request):
     if resource not in GATEWAY:
-        raise HTTPException(404, "Recurso não encontrado.")
+        raise HTTPException(404, "Resource not found.")
     limit(request, "gateway", 80, 60)
     try:
         async with httpx.AsyncClient(timeout=90, follow_redirects=False) as client:
             response = await client.get(f"{DATA_API}/api/{resource}", params=list(request.query_params.multi_items()))
         if response.status_code >= 400:
             try:
-                detail = response.json().get("detail", "Fonte de dados indisponível.")
+                detail = response.json().get("detail", "Data source unavailable.")
             except ValueError:
-                detail = "Fonte de dados indisponível."
+                detail = "Data source unavailable."
             raise HTTPException(response.status_code, detail)
         return response.json()
     except (httpx.HTTPError, ValueError):
-        raise HTTPException(503, "A API de dados não respondeu. Tente novamente em instantes.") from None
+        raise HTTPException(503, "The data API did not answer. Try again in a moment.") from None
 
 
 @app.get("/gateway/historico-mensal/{z}/{x}/{y}.png")
@@ -145,10 +145,10 @@ async def monthly_tile(z: int, x: int, y: int, request: Request):
             response = await client.get(f"{DATA_API}/api/historico-mensal/{z}/{x}/{y}.png",
                                         params=list(request.query_params.multi_items()))
         if response.status_code != 200 or not response.content.startswith(b"\x89PNG\r\n\x1a\n"):
-            raise HTTPException(503, "Mapa histórico indisponível. Tente novamente.")
+            raise HTTPException(503, "History map unavailable. Try again.")
         return Response(response.content, media_type="image/png", headers={"Cache-Control": "public, max-age=900"})
     except httpx.HTTPError:
-        raise HTTPException(503, "Mapa histórico indisponível. Tente novamente.") from None
+        raise HTTPException(503, "History map unavailable. Try again.") from None
 
 
 @app.post("/local/analise")
@@ -174,11 +174,11 @@ async def scenario(query: ScenarioQuery, request: Request):
         async with httpx.AsyncClient(timeout=90, follow_redirects=False) as client:
             response = await client.post(f"{DATA_API}/api/cenario", json=query.model_dump())
         if response.status_code >= 400:
-            detail = response.json().get("detail", "Cenário indisponível.")
+            detail = response.json().get("detail", "Scenario unavailable.")
             raise HTTPException(response.status_code, detail)
         return response.json()
     except (httpx.HTTPError, ValueError):
-        raise HTTPException(503, "Não foi possível calcular o cenário agora.") from None
+        raise HTTPException(503, "The scenario could not be computed right now.") from None
 
 
 @app.post("/local/relatos", status_code=201)
@@ -189,19 +189,19 @@ async def report(data: Report, request: Request):
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from None
     except Exception:
-        raise HTTPException(503, "Não foi possível registrar o relato. Tente novamente mais tarde.") from None
-    return {"id": report_id, "status": "pendente", "mensagem": "Relato recebido para revisão. Não é uma detecção de satélite."}
+        raise HTTPException(503, "The report could not be saved. Try again later.") from None
+    return {"id": report_id, "status": "pendente", "mensagem": "Report received for review. It is not a satellite detection."}
 
 
 @app.get("/local/relatos")
 async def reports(request: Request, pais: str):
     limit(request, "reports-read", 30, 60)
     if not 2 <= len(pais) <= 120:
-        raise HTTPException(400, "País inválido.")
+        raise HTTPException(400, "Invalid country.")
     try:
         return {"relatos": await asyncio.to_thread(db.approved_reports, pais)}
     except Exception:
-        raise HTTPException(503, "Relatos indisponíveis no momento.") from None
+        raise HTTPException(503, "Reports are unavailable right now.") from None
 
 
 dist = ROOT / ("atlas_dist" if (ROOT / "atlas_dist").exists() else "dist")

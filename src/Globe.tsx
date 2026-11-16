@@ -74,7 +74,7 @@ export default function Globe(props: Props) {
         requestRenderMode: true, maximumRenderTimeChange: Infinity,
       });
     } catch {
-      setError('O globo 3D precisa de WebGL. Ative a aceleração gráfica ou use um navegador compatível.');
+      setError('The 3D globe needs WebGL. Turn on hardware acceleration or use a compatible browser.');
       return;
     }
     viewer.current = globe;
@@ -106,7 +106,7 @@ export default function Globe(props: Props) {
       highlightCountry(globe, layer, outline, latest.current.selected?.code ?? null);
       globe.scene.requestRender();
     }).catch(() => {
-      if (!disposed) setError('Não foi possível carregar os limites dos países. A busca continua disponível.');
+      if (!disposed) setError('The country boundaries could not be loaded. Search still works.');
     });
 
     const handler = new ScreenSpaceEventHandler(globe.scene.canvas);
@@ -176,7 +176,7 @@ export default function Globe(props: Props) {
     const provider = new UrlTemplateImageryProvider({
       url: `/gateway/historico-mensal/{z}/{x}/{y}.png?${params.toString()}`,
       tilingScheme: new GeographicTilingScheme(), tileWidth: 256, tileHeight: 256,
-      maximumLevel: 8, credit: 'NASA FIRMS · MODIS e VIIRS',
+      maximumLevel: 8, credit: 'NASA FIRMS · MODIS and VIIRS',
     });
     let failed = false;
     const removeError = provider.errorEvent.addEventListener(() => {
@@ -220,7 +220,7 @@ export default function Globe(props: Props) {
           forecastLayer.current = layer;
           await globe.dataSources.add(layer);
           globe.scene.requestRender();
-        }).catch(() => { if (!cancelled) setError('Não foi possível desenhar as células previstas no globo.'); });
+        }).catch(() => { if (!cancelled) setError('The forecast cells could not be drawn on the globe.'); });
     }
     globe.scene.requestRender();
     return () => { cancelled = true; };
@@ -243,7 +243,7 @@ export default function Globe(props: Props) {
         hotspotLayer.current = layer;
         await globe.dataSources.add(layer);
         globe.scene.requestRender();
-      }).catch(() => { if (!cancelled) setError('Não foi possível desenhar os focos no globo.'); });
+      }).catch(() => { if (!cancelled) setError('The hotspots could not be drawn on the globe.'); });
     }
     globe.scene.requestRender();
     return () => { cancelled = true; };
@@ -266,7 +266,7 @@ export default function Globe(props: Props) {
         directLayer.current = layer;
         await globe.dataSources.add(layer);
         globe.scene.requestRender();
-      }).catch(() => { if (!cancelled) setError('Não foi possível desenhar os pontos FIRMS no globo.'); });
+      }).catch(() => { if (!cancelled) setError('The FIRMS points could not be drawn on the globe.'); });
     }
     globe.scene.requestRender();
     return () => { cancelled = true; };
@@ -351,11 +351,11 @@ export default function Globe(props: Props) {
   };
 
   return <>
-    <div className="globe" ref={element} role="region" tabIndex={0} onKeyDown={handleKey} aria-label="Globo 3D. Use as setas para girar, mais e menos para zoom. Selecione um país pelo mapa ou pela busca." />
-    <div className="globe-controls" aria-label="Controles do globo">
-      <button title="Aproximar" aria-label="Aproximar globo" onClick={() => zoom('in')}><Plus size={18} /></button>
-      <button title="Afastar" aria-label="Afastar globo" onClick={() => zoom('out')}><Minus size={18} /></button>
-      <button title="Visão global" aria-label="Voltar à visão global" onClick={reset}><Globe2 size={17} /></button>
+    <div className="globe" ref={element} role="region" tabIndex={0} onKeyDown={handleKey} aria-label="3D globe. Use the arrow keys to rotate, plus and minus to zoom. Choose a country on the map or with search." />
+    <div className="globe-controls" aria-label="Globe controls">
+      <button title="Zoom in" aria-label="Zoom in on the globe" onClick={() => zoom('in')}><Plus size={18} /></button>
+      <button title="Zoom out" aria-label="Zoom out of the globe" onClick={() => zoom('out')}><Minus size={18} /></button>
+      <button title="Whole globe" aria-label="Back to the whole globe" onClick={reset}><Globe2 size={17} /></button>
     </div>
     {error && <div className="globe-error" role="alert">{error}</div>}
   </>;
@@ -368,9 +368,9 @@ function highlightCountry(globe: Viewer, layer: GeoJsonDataSource, outline: Cust
     if (positions.length > 2) {
       const closed = [...positions, positions[0]];
       outline.entities.add({ polyline: { positions: closed, clampToGround: true, width: 5,
-        material: Color.fromCssColorString('#173f32').withAlpha(0.95) } });
+        material: Color.fromCssColorString('#06070b').withAlpha(0.95) } });
       outline.entities.add({ polyline: { positions: closed, clampToGround: true, width: 2.5,
-        material: Color.fromCssColorString('#dfff9b') } });
+        material: Color.fromCssColorString('#ffb347') } });
     }
     hierarchy.holes?.forEach(addOutline);
   };
@@ -378,9 +378,9 @@ function highlightCountry(globe: Viewer, layer: GeoJsonDataSource, outline: Cust
     if (!entity.polygon) return;
     const isSelected = code && entity.properties?.ADM0_A3?.getValue(globe.clock.currentTime) === code;
     entity.polygon.material = new ColorMaterialProperty(
-      Color.fromCssColorString(isSelected ? '#d9f4b8' : '#bcead3').withAlpha(isSelected ? 0.25 : 0.01),
+      Color.fromCssColorString(isSelected ? '#ffb347' : '#bcead3').withAlpha(isSelected ? 0.25 : 0.01),
     );
-    entity.polygon.outlineColor = new ConstantProperty(Color.fromCssColorString(isSelected ? '#e2fa9e' : '#d8ebe0').withAlpha(isSelected ? 0.95 : 0.48));
+    entity.polygon.outlineColor = new ConstantProperty(Color.fromCssColorString(isSelected ? '#ffd9a8' : '#d8ebe0').withAlpha(isSelected ? 0.95 : 0.48));
     if (isSelected) {
       const hierarchy = entity.polygon.hierarchy?.getValue(globe.clock.currentTime) as PolygonHierarchy | undefined;
       if (hierarchy) addOutline(hierarchy);

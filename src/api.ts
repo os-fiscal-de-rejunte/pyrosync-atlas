@@ -13,7 +13,7 @@ export async function postData<T>(path: string, body: unknown): Promise<T> {
 async function request<T>(path: string, options: RequestInit): Promise<T> {
   const response = await fetch(path, options);
   if (!response.ok) {
-    let message = 'Não foi possível carregar os dados. Tente novamente.';
+    let message = 'The data could not be loaded. Try again.';
     try {
       const result = await response.json();
       if (typeof result.detail === 'string') message = result.detail;
@@ -32,13 +32,13 @@ export function dateUtc(daysAgo = 0): string {
 export function dateLabel(value?: string | null): string {
   if (!value) return '—';
   const short = value.slice(0, 10).split('-');
-  return short.length === 3 ? `${short[2]}/${short[1]}/${short[0]}` : value;
+  return short.length === 3 ? short.join('-') : value;
 }
 
 export function numberLabel(value: number): string {
-  return new Intl.NumberFormat('pt-BR').format(value);
+  return new Intl.NumberFormat('en-US').format(value);
 }
 
 export function percentLabel(value: number | null | undefined): string {
-  return value == null ? 'Indisponível' : `${(value * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+  return value == null ? 'Unavailable' : `${(value * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
 }

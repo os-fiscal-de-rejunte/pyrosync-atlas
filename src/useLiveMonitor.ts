@@ -64,7 +64,7 @@ export function useLiveMonitor(enabled: boolean) {
         }
       } catch (error) {
         if (!stopped && !controller.signal.aborted) {
-          setMonitor((old) => ({ ...old, status: 'error', error: error instanceof Error ? error.message : 'Consulta indisponível.' }));
+          setMonitor((old) => ({ ...old, status: 'error', error: error instanceof Error ? error.message : 'Query unavailable.' }));
         }
       } finally {
         busy = false;

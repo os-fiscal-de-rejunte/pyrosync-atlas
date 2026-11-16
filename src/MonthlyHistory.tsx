@@ -25,21 +25,21 @@ export default function MonthlyHistory({ country, active, status, onApply, onRem
     if (details.current) details.current.open = false;
   };
   return <details ref={details} className="monthly-history">
-    <summary><span className="monitor-symbol"><CalendarDays size={17} /></span><span className="monitor-label"><strong>Histórico no mapa</strong><small>{active ? `${active.month} · ${active.scope === 'world' ? 'Mundo' : country}${status === 'loading' ? ' · Carregando' : status === 'error' ? ' · Erro ao carregar' : ''}` : 'Escolha um mês e uma área'}</small></span><ChevronDown size={16} /></summary>
+    <summary><span className="monitor-symbol"><CalendarDays size={17} /></span><span className="monitor-label"><strong>History on the map</strong><small>{active ? `${active.month} · ${active.scope === 'world' ? 'World' : country}${status === 'loading' ? ' · Loading' : status === 'error' ? ' · Failed to load' : ''}` : 'Choose a month and an area'}</small></span><ChevronDown size={16} /></summary>
     <div className="monthly-content">
       <form onSubmit={submit}>
-        <label htmlFor={`${id}-month`}>Mês da observação</label>
+        <label htmlFor={`${id}-month`}>Month observed</label>
         <input id={`${id}-month`} type="month" min="2000-11" max={dateUtc().slice(0, 7)} value={month} onChange={(event) => setMonth(event.target.value)} required />
-        <label htmlFor={`${id}-scope`}>Onde mostrar</label>
+        <label htmlFor={`${id}-scope`}>Where to show</label>
         <select id={`${id}-scope`} value={scope} onChange={(event) => setScope(event.target.value as 'world' | 'country')}>
-          <option value="world">Mundo inteiro</option>
-          <option value="country" disabled={!country}>{country ? `País selecionado: ${country}` : 'Selecione um país no mapa'}</option>
+          <option value="world">Whole world</option>
+          <option value="country" disabled={!country}>{country ? `Selected country: ${country}` : 'Choose a country on the map'}</option>
         </select>
-        <button className="monthly-apply" type="submit">Mostrar no globo</button>
+        <button className="monthly-apply" type="submit">Show on the globe</button>
       </form>
-      {active && <div className="monthly-result" role="status">{status === 'loading' ? 'Carregando o mapa da NASA. Isso pode levar alguns instantes.' : status === 'error' ? 'Não foi possível carregar todo o mapa. Tente mostrar novamente.' : 'Mapa histórico disponível. Aproxime para ver os pontos.'}<button type="button" onClick={onRemove}><X size={14} /> Remover mapa</button></div>}
-      <details className="monitor-help"><summary><CircleHelp size={14} /> O que aparece?</summary><p>Os pontos vermelhos representam registros térmicos MODIS e VIIRS disponibilizados pela NASA para o mês, não incêndios confirmados. Pontos podem se sobrepor. A cobertura varia por sensor e data; áreas sem pontos não comprovam ausência de fogo.</p></details>
-      <a href="https://firms.modaps.eosdis.nasa.gov/mapserver/wms-info/" target="_blank" rel="noreferrer">Fonte: NASA FIRMS · dados em UTC</a>
+      {active && <div className="monthly-result" role="status">{status === 'loading' ? 'Loading the NASA map. This can take a moment.' : status === 'error' ? 'The whole map could not be loaded. Try showing it again.' : 'History map ready. Zoom in to see the points.'}<button type="button" onClick={onRemove}><X size={14} /> Remove map</button></div>}
+      <details className="monitor-help"><summary><CircleHelp size={14} /> What does it show?</summary><p>The red points are MODIS and VIIRS thermal records released by NASA for the month, not confirmed fires. Points can overlap. Coverage varies by sensor and date; an area without points does not prove the absence of fire.</p></details>
+      <a href="https://firms.modaps.eosdis.nasa.gov/mapserver/wms-info/" target="_blank" rel="noreferrer">Source: NASA FIRMS · data in UTC</a>
     </div>
   </details>;
 }
